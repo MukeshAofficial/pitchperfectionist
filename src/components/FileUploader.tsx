@@ -42,12 +42,18 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
   };
 
   const validateAndSetFile = (file: File) => {
-    const validTypes = ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint'];
+    // Accept PowerPoint and Word files (for more compatibility)
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+      'application/vnd.ms-powerpoint', // .ppt
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword' // .doc
+    ];
     
     if (!validTypes.includes(file.type)) {
       toast({
         title: "Invalid file format",
-        description: "Please upload a PowerPoint file (.ppt or .pptx)",
+        description: "Please upload a PowerPoint (.ppt/.pptx) or Word (.doc/.docx) file",
         variant: "destructive",
       });
       return;
@@ -85,7 +91,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
             or <span className="text-pitch-purple underline cursor-pointer">browse files</span>
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Supported formats: .ppt and .pptx
+            Supported formats: .ppt, .pptx, .doc, .docx
           </p>
         </div>
 
@@ -93,7 +99,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
           type="file"
           id="file-upload"
           className="hidden"
-          accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          accept=".ppt,.pptx,.doc,.docx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={handleFileChange}
         />
 
