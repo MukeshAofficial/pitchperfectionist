@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Eye } from "lucide-react";
 import Header from "@/components/Header";
 import SlideNavigation from "@/components/SlideNavigation";
 import SlidePreview from "@/components/SlidePreview";
@@ -9,37 +9,33 @@ import EnhancementOptions, { EnhancementType, EnhancementOptions as EnhanceOptio
 import EnhancedContent from "@/components/EnhancedContent";
 import SettingsDialog from "@/components/SettingsDialog";
 import { getPresentationById, updateSlide } from "@/services/presentationService";
+import { formatSlideContent } from "@/utils/pptParser";
 import aiService from "@/services/aiService";
+import { Button } from "@/components/ui/button";
 
 const EditorPage: React.FC = () => {
   const { presentationId } = useParams<{ presentationId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // State for the presentation and current slide
   const [presentation, setPresentation] = useState<any | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   
-  // State for the AI enhancement
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancedContent, setEnhancedContent] = useState("");
   
-  // History state for undo/redo
   const [contentHistory, setContentHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
-  // Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState(aiService.getApiKey());
   const [model, setModel] = useState(aiService.getModel());
   const [defaultPrompt, setDefaultPrompt] = useState(aiService.getDefaultPrompt());
   const [darkMode, setDarkMode] = useState(true);
   
-  // Get the current slide content
   const currentSlide = presentation?.slides[currentSlideIndex - 1] || null;
   
-  // Load the presentation
   useEffect(() => {
     if (presentationId) {
       const loadedPresentation = getPresentationById(presentationId);
@@ -47,7 +43,6 @@ const EditorPage: React.FC = () => {
       if (loadedPresentation) {
         setPresentation(loadedPresentation);
         
-        // Initialize history with first slide content
         if (loadedPresentation.slides.length > 0) {
           const initialContent = loadedPresentation.slides[0].content;
           setContentHistory([initialContent]);
@@ -64,7 +59,6 @@ const EditorPage: React.FC = () => {
     }
   }, [presentationId, navigate, toast]);
   
-  // Update history when changing slides
   useEffect(() => {
     if (currentSlide && presentation) {
       setEnhancedContent(currentSlide.content);
@@ -73,49 +67,40 @@ const EditorPage: React.FC = () => {
     }
   }, [currentSlideIndex, currentSlide, presentation]);
   
-  // Handle slide selection
   const handleSelectSlide = (slideNumber: number) => {
     setCurrentSlideIndex(slideNumber);
   };
   
-  // Handle back button click
   const handleBackClick = () => {
     navigate("/");
   };
   
-  // Handle settings click
   const handleSettingsClick = () => {
     setSettingsOpen(true);
   };
   
-  // Handle API key change
   const handleApiKeyChange = (key: string) => {
     setApiKey(key);
     localStorage.setItem("openai-api-key", key);
     aiService.updateConfig({ apiKey: key });
   };
   
-  // Handle model change
   const handleModelChange = (model: string) => {
     setModel(model);
     localStorage.setItem("openai-model", model);
     aiService.updateConfig({ model });
   };
   
-  // Handle default prompt change
   const handleDefaultPromptChange = (prompt: string) => {
     setDefaultPrompt(prompt);
     localStorage.setItem("default-prompt", prompt);
     aiService.updateConfig({ defaultPrompt: prompt });
   };
   
-  // Handle dark mode change
   const handleDarkModeChange = (enabled: boolean) => {
     setDarkMode(enabled);
-    // In a real implementation, you would apply the theme change here
   };
   
-  // Handle enhancement
   const handleEnhance = async (type: EnhancementType, options: EnhanceOptions) => {
     if (!currentSlide) return;
     
@@ -126,7 +111,6 @@ const EditorPage: React.FC = () => {
       
       setEnhancedContent(enhanced);
       
-      // Add to history
       const newHistory = contentHistory.slice(0, historyIndex + 1);
       newHistory.push(enhanced);
       setContentHistory(newHistory);
@@ -147,14 +131,11 @@ const EditorPage: React.FC = () => {
     }
   };
   
-  // Handle applying changes
   const handleApplyChanges = (content: string) => {
     if (!presentationId || !currentSlide) return;
     
-    // Update the slide
     updateSlide(presentationId, currentSlide.id, content);
     
-    // Update the presentation in state
     if (presentation) {
       const updatedSlides = [...presentation.slides];
       const slideIndex = updatedSlides.findIndex((s) => s.id === currentSlide.id);
@@ -173,7 +154,6 @@ const EditorPage: React.FC = () => {
     }
   };
   
-  // Handle undo
   const handleUndo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
@@ -181,7 +161,6 @@ const EditorPage: React.FC = () => {
     }
   };
   
-  // Handle redo
   const handleRedo = () => {
     if (historyIndex < contentHistory.length - 1) {
       setHistoryIndex(historyIndex + 1);
@@ -189,7 +168,12 @@ const EditorPage: React.FC = () => {
     }
   };
   
-  // If presentation is not loaded yet, show loading state
+  const handleViewModeClick = () => {
+    if (presentationId) {
+      navigate(`/viewer/${presentationId}`);
+    }
+  };
+  
   if (!presentation) {
     return (
       <div className="min-h-screen bg-pitch-dark flex flex-col">
@@ -208,17 +192,26 @@ const EditorPage: React.FC = () => {
     <div className="min-h-screen bg-pitch-dark flex flex-col">
       <Header 
         title={presentation.name} 
-        onBackClick={handleBackClick} 
-        onSettingsClick={handleSettingsClick}
+        onBackClick={() => navigate('/')} 
+        onSettingsClick={() => setSettingsOpen(true)}
         showBack={true}
       />
       
-      <div className="p-4">
+      <div className="p-4 flex justify-between items-center">
         <SlideNavigation
           currentSlide={currentSlideIndex}
           totalSlides={presentation.slides.length}
-          onSelectSlide={handleSelectSlide}
+          onSelectSlide={setCurrentSlideIndex}
         />
+        
+        <Button
+          variant="outline"
+          onClick={handleViewModeClick}
+          className="bg-pitch-dark-lighter border-white/10"
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          Presentation Mode
+        </Button>
       </div>
       
       <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[calc(100vh-200px)]">
@@ -246,7 +239,6 @@ const EditorPage: React.FC = () => {
         />
       </div>
       
-      {/* Settings Dialog */}
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
