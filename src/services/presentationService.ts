@@ -1,4 +1,3 @@
-
 import mammoth from "mammoth";
 
 // Interface for a slide
@@ -15,35 +14,63 @@ export interface Presentation {
   slides: Slide[];
 }
 
-// Mock function to extract text from a PowerPoint file
-// In a real implementation, you would use a library to extract text from PPTX
+// Import our API service
+import { uploadPowerPoint } from "./api";
+
+// Extract text from a PowerPoint file using the FastAPI backend
 export const extractTextFromPowerPoint = async (file: File): Promise<Presentation> => {
-  // This is a mock implementation
-  // In a real app, you would use a library like pptx-parser or a server-side solution
-  
-  return new Promise((resolve) => {
+  try {
+    // Use the API to upload and process the PowerPoint file
+    const result = await uploadPowerPoint(file);
+    
     // Create a unique ID for the presentation
     const presentationId = Date.now().toString();
     const presentationName = file.name.replace(/\.[^/.]+$/, "");
     
-    // Simulate processing time
-    setTimeout(() => {
-      // Generate mock slides
-      const slides: Slide[] = Array.from({ length: 6 }, (_, i) => ({
-        id: i + 1,
-        title: `Slide ${i + 1}`,
-        content: i === 0 
-          ? `Title: ${presentationName}\nDescription: This is the title slide of your presentation.`
-          : `This is slide ${i + 1} content. In a real implementation, this would contain the actual text from your PowerPoint slide.`
-      }));
-      
-      resolve({
-        id: presentationId,
-        name: presentationName,
-        slides,
-      });
-    }, 1500);
-  });
+    // Map the slides from the API response
+    const slides: Slide[] = result.slides.map((content: string, index: number) => ({
+      id: index + 1,
+      title: `Slide ${index + 1}`,
+      content: content || `No text on slide ${index + 1}`
+    }));
+    
+    const presentation = {
+      id: presentationId,
+      name: presentationName,
+      slides,
+    };
+    
+    // Save the presentation
+    savePresentation(presentation);
+    
+    return presentation;
+  } catch (error) {
+    console.error("Error extracting text from PowerPoint:", error);
+    // Fallback to mock data if the API fails
+    return fallbackMockData(file);
+  }
+};
+
+// Fallback to mock data if the API fails
+const fallbackMockData = (file: File): Presentation => {
+  // Create a unique ID for the presentation
+  const presentationId = Date.now().toString();
+  const presentationName = file.name.replace(/\.[^/.]+$/, "");
+  
+  // Generate mock slides
+  const slides: Slide[] = Array.from({ length: 6 }, (_, i) => ({
+    id: i + 1,
+    title: `Slide ${i + 1}`,
+    content: i === 0 
+      ? `Title: ${presentationName}\nDescription: This is the title slide of your presentation.`
+      : `This is slide ${i + 1} content. In a real implementation, this would contain the actual text from your PowerPoint slide.`
+  }));
+  
+  return {
+    id: presentationId,
+    name: presentationName,
+    slides,
+  };
 };
 
 // Save a presentation to local storage

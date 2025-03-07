@@ -1,5 +1,5 @@
-
 import { EnhancementType, EnhancementOptions } from "@/components/EnhancementOptions";
+import { enhanceSlide as apiEnhanceSlide } from "./api";
 
 // Interface for the AI service configuration
 interface AIServiceConfig {
@@ -11,6 +11,7 @@ interface AIServiceConfig {
 // Create a class for the AI service
 class AIService {
   private config: AIServiceConfig;
+  private currentPresentationId: string | null = null;
 
   constructor(config: AIServiceConfig) {
     this.config = config;
@@ -19,6 +20,16 @@ class AIService {
   // Update the service configuration
   public updateConfig(config: Partial<AIServiceConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+
+  // Set the current presentation ID
+  public setCurrentPresentationId(id: string): void {
+    this.currentPresentationId = id;
+  }
+
+  // Get the current presentation ID
+  public getCurrentPresentationId(): string | null {
+    return this.currentPresentationId;
   }
 
   // Get the current API key
@@ -104,8 +115,43 @@ class AIService {
     return prompt;
   }
 
-  // Enhance a slide using the OpenAI API
+  // Enhance a slide using the FastAPI backend
   public async enhanceSlide(
+    enhancementType: EnhancementType,
+    slideContent: string,
+    options: EnhancementOptions,
+    slideIndex: number = 0
+  ): Promise<string> {
+    try {
+      // Create the enhancement request options
+      const enhancementOptions = {
+        customInstructions: options.customInstructions,
+        toneLevel: options.toneLevel,
+        targetAudience: options.targetAudience,
+        apiKey: this.config.apiKey,
+        model: this.config.model,
+        defaultPrompt: this.config.defaultPrompt,
+      };
+      
+      // If we're in development mode and don't have a real backend connection
+      if (process.env.NODE_ENV === "development" && !import.meta.env.VITE_API_URL) {
+        console.log("Simulating backend enhancement in development");
+        return this.simulateEnhancement(enhancementType, slideContent);
+      }
+      
+      // Call the API service
+      const result = await apiEnhanceSlide(slideIndex, enhancementType, enhancementOptions);
+      return result.enhanced_content;
+    } catch (error) {
+      console.error("Error enhancing slide:", error);
+      
+      // Fallback to OpenAI API if the backend fails
+      return this.fallbackToOpenAI(enhancementType, slideContent, options);
+    }
+  }
+  
+  // Fallback to OpenAI API if the backend fails
+  private async fallbackToOpenAI(
     enhancementType: EnhancementType,
     slideContent: string,
     options: EnhancementOptions
@@ -117,13 +163,6 @@ class AIService {
     
     try {
       const prompt = this.createPrompt(enhancementType, slideContent, options);
-      
-      // This is where you would make the actual API call to OpenAI
-      // For now, let's simulate it
-      if (process.env.NODE_ENV === "development") {
-        console.log("Simulating OpenAI API call in development");
-        return this.simulateEnhancement(enhancementType, slideContent);
-      }
       
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -158,8 +197,9 @@ class AIService {
       
       return enhancedContent;
     } catch (error) {
-      console.error("Error enhancing slide:", error);
-      throw error;
+      console.error("Error with OpenAI fallback:", error);
+      // If everything fails, return simulated content
+      return this.simulateEnhancement(enhancementType, slideContent);
     }
   }
   

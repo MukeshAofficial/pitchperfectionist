@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import EditorPage from "./pages/EditorPage";
 import NotFound from "./pages/NotFound";
+import BackendStatus from "./components/BackendStatus";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <div className="fixed top-2 right-2 z-50">
+          <BackendStatus />
+        </div>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/editor/:presentationId" element={<EditorPage />} />

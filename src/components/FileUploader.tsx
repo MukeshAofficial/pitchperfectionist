@@ -13,6 +13,7 @@ interface FileUploaderProps {
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -42,12 +43,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
   };
 
   const validateAndSetFile = (file: File) => {
-    const validTypes = ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint'];
+    setUploadError(null);
+    
+    // Accept both PowerPoint and Word documents
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+      'application/vnd.ms-powerpoint', // ppt
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+      'application/msword' // doc
+    ];
     
     if (!validTypes.includes(file.type)) {
+      const errorMsg = "Please upload a PowerPoint file (.ppt or .pptx) or Word document (.doc or .docx)";
+      setUploadError(errorMsg);
       toast({
         title: "Invalid file format",
-        description: "Please upload a PowerPoint file (.ppt or .pptx)",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -58,6 +69,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
 
   const handleUpload = () => {
     if (selectedFile) {
+      setUploadError(null);
       onFileUpload(selectedFile);
     }
   };
@@ -69,6 +81,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
           "border-2 border-dashed rounded-lg p-8 transition-all duration-200 ease-in-out",
           "flex flex-col items-center justify-center space-y-4",
           isDragging ? "border-pitch-purple bg-pitch-purple/5" : "border-gray-600 hover:border-pitch-purple/70",
+          uploadError ? "border-red-500/50" : "",
           "glass-card"
         )}
         onDragOver={handleDragOver}
@@ -85,7 +98,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
             or <span className="text-pitch-purple underline cursor-pointer">browse files</span>
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Supported formats: .ppt and .pptx
+            Supported formats: .ppt, .pptx, .doc, .docx
           </p>
         </div>
 
@@ -93,7 +106,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
           type="file"
           id="file-upload"
           className="hidden"
-          accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          accept=".ppt,.pptx,.doc,.docx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={handleFileChange}
         />
 
@@ -103,6 +116,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUpload, isLoading }) 
             Browse Files
           </Button>
         </label>
+        
+        {uploadError && (
+          <p className="text-sm text-red-500">{uploadError}</p>
+        )}
       </div>
 
       {selectedFile && (
